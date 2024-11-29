@@ -1,0 +1,15 @@
+.tequila-toast-wrapper {
+  @apply top-0 sm:top-auto overflow-y-auto;
+  @apply fixed z-[100] flex gap-1 max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:flex-col md:max-w-[420px];
+  .scrollbar-hide;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
