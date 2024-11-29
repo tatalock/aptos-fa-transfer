@@ -14,7 +14,6 @@ interface AppStore {
   appInitialized: Ref<boolean>;
   priceUpdatedCount: Ref<number>;
   APT2USDT: Ref<number>;
-  updateAddressAssets: () => Promise<void>;
   walletCore: WalletCore;
   tokenList: Ref<any[]>;
 }
@@ -46,50 +45,6 @@ const useAppStore = defineStore('appStore', (): AppStore => {
       },
     },
   );
-
-  const updateAddressAssets = async () => {
-    if (!address.value) {
-      tokenList.value.forEach((token: Token) => (token.balance = 0));
-      return;
-    }
-
-    const result: any = await fetch(import.meta.env.VITE_APP_OFFICIAL_GRAPHQL_ENDPOINT, {
-      method: 'POST',
-      body: JSON.stringify({
-        query: gql`
-          query getCurrentFungibleAssetBalances {
-            current_fungible_asset_balances(
-              where: {
-                owner_address: {
-                  _eq: "${address.value}"
-                }
-              }
-            ) {
-              amount
-              amount_v1
-              amount_v2
-              asset_type
-              asset_type_v1
-              asset_type_v2
-            }
-          }
-        `,
-        operationName: 'getCurrentFungibleAssetBalances',
-      }),
-    });
-
-    const balances: any[] = (await result.json()).data?.current_fungible_asset_balances;
-
-    balances?.map((balance: any) => {
-      const index: number = tokenList.value.findIndex((token: Token) => {
-        return token.coin_type == balance.asset_type || token.fa_type == balance.asset_type;
-      });
-
-      if (tokenList.value[index]) {
-        tokenList.value[index].balance = balance.amount;
-      }
-    });
-  };
 
   walletCore.on('accountChange', () => {
     address.value = walletCore.account?.address;
@@ -141,7 +96,6 @@ const useAppStore = defineStore('appStore', (): AppStore => {
     tokenList,
     priceUpdatedCount,
     appInitialized,
-    updateAddressAssets,
   };
 });
 

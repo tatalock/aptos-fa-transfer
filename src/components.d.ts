@@ -7,17 +7,11 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    Button: typeof import('@/lib/Button.vue')['default']
-    Card: typeof import('@/lib/Card.vue')['default']
     Cards: typeof import('./components/Home/Cards.vue')['default']
     Dialog: typeof import('./components/Dialog/index.vue')['default']
-    Form: typeof import('@/lib/Form.vue')['default']
-    FormItem: typeof import('@/lib/FormItem.vue')['default']
-    Input: typeof import('@/lib/Input.vue')['default']
     NavLinks: typeof import('./components/NavLinks.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    Side: typeof import('./components/Side.vue')['default']
     SideBar: typeof import('./components/SideBar.vue')['default']
     Snackbar: typeof import('./components/Snackbar/index.vue')['default']
     StatsPanelList: typeof import('./components/Home/StatsPanelList.vue')['default']
