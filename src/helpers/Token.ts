@@ -1,22 +1,34 @@
-import { AccountAddress } from '@aptos-labs/ts-sdk';
+import { APTOS_COIN_TYPE, USDT_DECIMALS } from '@/config';
+import { stringToUint8Array } from '@/utils';
+import { AccountAddress, createObjectAddress, Serializer } from '@aptos-labs/ts-sdk';
 import BigNumber from 'bignumber.js';
 import { functionIdToStringLong } from './TokenHelper';
+import TokenPairs from './TokenPairs';
 
 BigNumber.config({
-  EXPONENTIAL_AT: 20,
+  EXPONENTIAL_AT: [-20, 20],
 });
 
 class Token {
   name: string = '';
   symbol: string = '';
+  hyperfluid_symbol: string = '';
   decimals: number = 8;
-  price: number = 0;
+  index: number | string = '';
+  tags: string[] = [];
+  bridge: string = '';
+  price: number | string = 0;
+  priceU: number | string = 0;
   balance: number = 0;
   asset_type: `${string}::${string}::${string}` | string = '';
+  coin_type?: `${string}::${string}::${string}` | string = '';
+  fa_type?: string = '';
   logo_url?: string;
+  logoUrl?: string;
   isFa?: boolean;
   owener?: string;
   coingecko_id?: string;
+  coinMarketcapId?: string;
   token_type: {
     account_address?: string;
     module_name?: string;
@@ -28,14 +40,22 @@ class Token {
   constructor(args: {
     name: string;
     symbol: string;
+    hyperfluid_symbol?: string;
     decimals: number;
     asset_type: `${string}::${string}::${string}` | string;
-    price?: number;
+    coin_type?: `${string}::${string}::${string}` | string;
+    fa_type?: string;
+    index?: number | string;
+    tags?: string[];
+    bridge?: string;
+    price?: number | string;
+    priceU?: number | string;
     balance?: number;
     logo_url?: string;
     isFa?: boolean;
     owener?: string;
     coingecko_id?: string;
+    coinMarketcapId?: string;
     token_type?: {
       account_address?: string;
       module_name?: string;
@@ -44,6 +64,29 @@ class Token {
     };
   }) {
     Object.assign(this, args);
+    this.faTypeCalculate();
+  }
+
+  faTypeCalculate() {
+    if (!this.coin_type) return;
+
+    // APT
+    if (TokenPairs.AssetTypeEq(this.coin_type, APTOS_COIN_TYPE)) {
+      this.fa_type = '0xa';
+      return;
+    }
+
+    const [contractAddress, moduleName, functionName] = this.coin_type.split('::');
+    const shortContractAddress = [
+      AccountAddress.from(contractAddress).toString(),
+      moduleName,
+      functionName,
+    ].join('::');
+
+    const ser = new Serializer();
+    ser.serializeFixedBytes(stringToUint8Array(shortContractAddress));
+    const faType = createObjectAddress(AccountAddress.from('0xa'), ser.toUint8Array());
+    this.fa_type = faType.toString();
   }
 
   //  == Display ==
@@ -55,7 +98,32 @@ class Token {
   }
 
   priceDisplayWithSymbol(amount: number | string | BigNumber, precision: number = 4) {
-    return `${this.priceDisplay(amount, precision)} ${this.symbol}`;
+    return `${this.priceDisplay(amount, precision)} ${this.hyperfluid_symbol}`;
+  }
+
+  priceInUSDT(APTPrice: number | BigNumber = 0) {
+    return new BigNumber(this.price || 0).times(APTPrice).dp(USDT_DECIMALS).toNumber();
+  }
+
+  volumeInUSDT(APTPrice: number | BigNumber = 0) {
+    return Token.amountInDecimal(this.balance, this.decimals)
+      .times(this.priceInUSDT(APTPrice))
+      .dp(USDT_DECIMALS)
+      .toString();
+  }
+
+  volumeInUSDTByBalance(
+    balance: string | number | BigNumber = 0,
+    APTPrice: number | BigNumber = 0,
+  ) {
+    return (
+      new BigNumber(balance || 0).times(this.priceInUSDT(APTPrice)).dp(USDT_DECIMALS).toString() ||
+      0
+    );
+  }
+
+  get submitAssetType() {
+    return this.coin_type || this.fa_type || '';
   }
 
   /**
@@ -153,7 +221,7 @@ class Token {
    * token.balanceDisplayWithSymbol() // 12,345.6789 APT
    */
   balanceDisplayWithSymbol(): string {
-    return `${this.balanceDisplay()} ${this.symbol}`;
+    return `${this.balanceDisplay()} ${this.hyperfluid_symbol}`;
   }
 
   /**
@@ -184,27 +252,6 @@ class Token {
    */
   isInsufficientBalanceWithDecimal(amount: number | string | BigNumber) {
     return this.balanceInDecimal().isLessThan(amount);
-  }
-
-  /**
-   * Get token type in string
-   *
-   * @returns token type in string
-   */
-  get faType() {
-    const type = this.token_type.fa_type || this.token_type.type;
-    if (type.split('::').length == 3) {
-      const [account_address, module_name, token_name] = type.split('::');
-      return `${AccountAddress.from(
-        account_address,
-      ).toStringLong()}::${module_name}::${token_name}`;
-    } else if (type) {
-      return AccountAddress.from(this.token_type.fa_type || this.token_type.type).toStringLong();
-    }
-  }
-
-  isEqualFaType(token: Token) {
-    return this.faType === token.faType;
   }
 
   isTheToken(type: string) {

@@ -65,14 +65,14 @@
         <!-- right -->
         <div class="flex-col bg-white/10 rounded-md flex-col gap-3 max-h-200 overflow-y-auto py-10">
           <template v-if="selectToken">
-            <span class="font-semibold text-7 text-center">
+            <span class="font-semibold text-7 text-center px-2">
               Transfer
               <span class="text-btn-background">{{ selectToken?.metadata?.name }}</span>
             </span>
             <span class="text-center text-sm">
-              Total Balance:
+              Fa Balance:
               <span class="font-semibold text-base text-btn-background">
-                {{ Token.amountInDecimal(selectToken.amount, selectToken.metadata.decimals) }}
+                {{ Token.amountInDecimal(selectToken.amount_v2, selectToken.metadata.decimals) }}
               </span>
             </span>
 
@@ -81,7 +81,7 @@
               <label class="text-text/50">Amount:</label>
               <Input
                 class="font-semibold"
-                v-model:modelValue="inputStr"
+                v-model:modelValue="amount"
                 placeholder="0.00"
                 :pattern="PATTERN.number(selectToken.metadata.decimals || 8)"
               />
@@ -103,7 +103,7 @@
 <script lang="ts" setup>
   import { toast } from '@/components/Toast';
   import useWallets from '@/composable/useWallets';
-  import { HASURA_ENDPOINT } from '@/config';
+  import { AptosClient, HASURA_ENDPOINT } from '@/config';
   import { AssetBalanceQuery } from '@/config/Queries';
   import Token from '@/helpers/Token';
   import Button from '@/lib/Button.vue';
@@ -143,7 +143,7 @@
   };
 
   const selectToken = ref<any>();
-  const inputStr = ref('');
+  const amount = ref('');
   const targetAddress = ref('');
 
   const approving = ref(false);
@@ -161,14 +161,29 @@
       return;
     }
 
-    if (!inputStr.value || isNaN(Number(inputStr.value))) {
+    const selectTokenInstance = new Token({
+      name: selectToken.value.metadata.name,
+      symbol: selectToken.value.metadata.symbol,
+      decimals: selectToken.value.metadata.decimals,
+      coin_type: selectToken.value.asset_type_v1,
+      fa_type: selectToken.value.asset_type_v2,
+    } as any);
+
+    selectTokenInstance.faTypeCalculate();
+
+    if (!selectTokenInstance.fa_type) {
+      toast({ content: 'Token has not fa type', type: 'error' });
+      return;
+    }
+
+    if (!amount.value || isNaN(Number(amount.value))) {
       toast({ content: 'Invalid amount', type: 'error' });
       return;
     }
 
     if (
-      Token.amountInUnit(inputStr.value, selectToken.value.metadata.decimals).isGreaterThan(
-        selectToken.value.amount,
+      Token.amountInUnit(amount.value, selectToken.value.metadata.decimals).isGreaterThan(
+        selectToken.value.amount_v2,
       )
     ) {
       toast({ content: 'Insufficient balance', type: 'error' });
@@ -178,9 +193,22 @@
     try {
       approving.value = true;
       toast({ content: 'Approving...', type: 'info' });
-      // appStore.walletCore.signAndSubmitTransaction({
-      //   payload: {}
-      // })
+      const { hash } = await appStore.walletCore.signAndSubmitTransaction({
+        data: {
+          function: `0x1::primary_fungible_store::transfer`,
+          typeArguments: ['0x1::fungible_asset::Metadata'],
+          functionArguments: [
+            selectTokenInstance.fa_type,
+            targetAddress.value,
+            Token.amountInUnit(amount.value, selectToken.value.metadata.decimals).toString(),
+          ],
+        },
+      });
+
+      await AptosClient.waitForTransaction({
+        transactionHash: hash,
+      });
+      toast({ content: 'Approve success', type: 'success' });
     } catch (e: any) {
       toast({ content: e.message, type: 'error' });
     } finally {
