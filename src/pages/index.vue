@@ -1,6 +1,9 @@
 <template>
   <Container class="flex-col items-center gap-2 p-20 py-30">
-    <div class="max-w-500px mx-auto w-full bg-white/10 rounded-5 p-6 px-2" v-if="!appStore.address">
+    <div
+      class="max-w-500px mx-auto w-full bg-background/10 rounded-5 p-6 px-2"
+      v-if="!appStore.address"
+    >
       <div class="flex-col">
         <div
           class="flex items-center font-semibold p-4 rounded-md cursor-pointer hover:bg-white/5"
@@ -34,7 +37,7 @@
         </span>
       </span>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-10 w-full">
+      <div class="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-4 sm:gap-10 w-full">
         <div class="bg-white/10 rounded-md flex-col max-h-200 overflow-y-auto">
           <!-- left -->
           <div
@@ -78,7 +81,20 @@
 
             <div class="mt-10"></div>
             <div class="flex-col px-4 gap-4">
-              <label class="text-text/50">Amount:</label>
+              <label class="text-text/50 flex items-center gap-2 justify-between">
+                Amount:
+                <Button
+                  size="xs"
+                  @click="
+                    amount = Token.amountInDecimal(
+                      selectToken.amount_v2,
+                      selectToken.metadata.decimals,
+                    ).toString()
+                  "
+                >
+                  MAX
+                </Button>
+              </label>
               <Input
                 class="font-semibold"
                 v-model:modelValue="amount"
@@ -87,7 +103,7 @@
               />
               <label class="text-text/50">To:</label>
               <Input
-                class="text-xs font-medium"
+                class="font-medium text-xs"
                 v-model:modelValue="targetAddress"
                 placeholder="0xabcd"
               />

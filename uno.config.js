@@ -35,8 +35,8 @@ export default defineConfig({
             text: '#000000',
             background: '#ffffff',
             btn: {
-              background: '#ffffff',
-              text: '#03fc41',
+              background: '#439941',
+              text: '#ffffff',
             },
           },
         },
